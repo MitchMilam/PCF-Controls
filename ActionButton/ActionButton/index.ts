@@ -58,7 +58,7 @@ export class ActionButton
       }
     }
 
-    if (location.ancestorOrigins[0] === "https://make.powerapps.com") {
+    if (location.hostname === "make.powerapps.com") {
       this.isDesignMode = true;
     }
   }
