@@ -86,8 +86,18 @@ export const LookupCombobox = (props: ILookupToComboBoxProps): JSX.Element => {
   }, [props.selectedId]);
 
   const retrieveMetadata = () => {
-    props.context.utils
-      .getEntityMetadata(props.entityName)
+    if (!props.entityName) {
+      return;
+    }
+    // getEntityMetadata may be unavailable or throw synchronously (e.g. in the form designer)
+    let metadataPromise: Promise<ComponentFramework.PropertyHelper.EntityMetadata>;
+    try {
+      metadataPromise = props.context.utils.getEntityMetadata(props.entityName);
+    } catch (error) {
+      console.log("LookupToPicklist: unable to retrieve metadata", error);
+      return;
+    }
+    metadataPromise
       .then((metadata) => {
         setState((prevState) => {
           return {
@@ -105,11 +115,17 @@ export const LookupCombobox = (props: ILookupToComboBoxProps): JSX.Element => {
   };
 
   const setMrus = (categories: IRecordCategory[], records: IRecord[]) => {
-    // @ts-expect-error getRecentItems is not part of the typed API
-    const mrus = (props.context.parameters.lookup.getRecentItems?.() ?? []) as IMru[];
-    // @ts-expect-error getLookupConfiguration is not part of the typed API
-    const isMruDisabled = props.context.parameters.lookup.getLookupConfiguration?.()?.isMruDisabled !== false;
-    if (mrus.length === 0 || isMruDisabled) {
+    let mrus: IMru[] = [];
+    let isMruDisabled = true;
+    try {
+      // @ts-expect-error getRecentItems is not part of the typed API
+      mrus = (props.context.parameters.lookup.getRecentItems?.() ?? []) as IMru[];
+      // @ts-expect-error getLookupConfiguration is not part of the typed API
+      isMruDisabled = props.context.parameters.lookup.getLookupConfiguration?.()?.isMruDisabled !== false;
+    } catch (error) {
+      console.log("LookupToPicklist: unable to retrieve recent items", error);
+    }
+    if (!Array.isArray(mrus) || mrus.length === 0 || isMruDisabled) {
       return;
     }
 
@@ -270,8 +286,16 @@ export const LookupCombobox = (props: ILookupToComboBoxProps): JSX.Element => {
         "' and querytype eq 64";
     }
 
-    props.context.webAPI
-      .retrieveMultipleRecords("savedquery", filter)
+    // webAPI may be unavailable or throw synchronously (e.g. in the form designer)
+    let viewPromise: Promise<ComponentFramework.WebApi.RetrieveMultipleResponse>;
+    try {
+      viewPromise = props.context.webAPI.retrieveMultipleRecords("savedquery", filter);
+    } catch (error) {
+      console.log("LookupToPicklist: unable to retrieve records", error);
+      return;
+    }
+
+    viewPromise
       .then((result) => {
         const view = result.entities[0];
         if (!view) {

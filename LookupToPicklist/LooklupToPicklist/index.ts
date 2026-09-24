@@ -32,8 +32,20 @@ export class LookupToPicklist implements ComponentFramework.ReactControl<IInputs
         state: ComponentFramework.Dictionary
     ): void {
         this.notifyOutputChanged = notifyOutputChanged;
-		this.entityName = context.parameters.lookup.getTargetEntityType();
-		this.viewId = context.parameters.lookup.getViewId();
+		// These APIs are not always available (e.g. in the form designer)
+		try {
+			this.entityName = context.parameters.lookup.getTargetEntityType();
+		} catch (error) {
+			console.log("LookupToPicklist: unable to get the target table", error);
+		}
+		const lookupMetadata = context.parameters.lookup.attributes as ComponentFramework.PropertyHelper.FieldPropertyMetadata.LookupMetadata | undefined;
+		this.entityName ??= lookupMetadata?.Targets?.[0] ?? "";
+		try {
+			this.viewId = context.parameters.lookup.getViewId();
+		} catch (error) {
+			console.log("LookupToPicklist: unable to get the lookup view", error);
+			this.viewId = "";
+		}
 		// Remember the initial parent so loading the form doesn't clear the value
 		this.parentId = normalizeId(context.parameters.dependantLookup?.raw?.[0]?.id);
     }
